@@ -1,0 +1,85 @@
+package calculate;
+
+import jsf31kochfractalfx.JSF31KochFractalFX;
+import timeutil.TimeStamp;
+import java.util.*;
+
+/**
+ * @author Max Meijer
+ * Creation date 15/03/2017.
+ */
+public class KochManager implements Observer {
+
+    private KochFractal kf;
+    private JSF31KochFractalFX application;
+    private List<Edge> edges;
+    private int counter;
+
+    public KochManager(JSF31KochFractalFX application) {
+        kf = new KochFractal();
+        this.application = application;
+        edges =  Collections.synchronizedList(new ArrayList());
+        counter = 0;
+    }
+
+    public void changeLevel(int nxt) {
+        edges.clear();
+
+        kf.setLevel(nxt);
+        TimeStamp ts = new TimeStamp();
+        TimeStamp tsd = new TimeStamp();
+
+        ts.setBegin("Starting calculation");
+        EdgeCalculator edgeBot = new EdgeCalculator(this ,kf, 0);
+        EdgeCalculator edgeLeft = new EdgeCalculator(this ,kf, 1);
+        EdgeCalculator edgeRight = new EdgeCalculator(this ,kf, 2);
+
+        Thread t1 = new Thread(edgeBot);
+        Thread t2 = new Thread(edgeLeft);
+        Thread t3 = new Thread(edgeRight);
+
+        t1.start();
+        t2.start();
+        t3.start();
+
+        while(counter != 3) {
+            try {
+                t1.join();
+                t2.join();
+                t3.join();
+            } catch(InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        ts.setEnd("Finished calculation");
+        tsd.setBegin("Start drawing");
+        drawEdges();
+        tsd.setEnd("Finished drawing");
+
+        application.setTextCalc(ts.toString());
+        application.setTextDraw(tsd.toString());
+    }
+
+    public void drawEdges() {
+        application.clearKochPanel();
+
+        application.setTextNrEdges(String.valueOf(kf.getNrOfEdges()));
+        for(Edge e: edges) {
+            application.drawEdge(e);
+        }
+    }
+
+    public synchronized void addEdge(Edge edge) {
+        edges.add(edge);
+    }
+
+    public synchronized  void increaseCounter() {
+        counter++;
+    }
+
+    @Override
+    public void update(Observable o, Object arg) {
+        edges.add((Edge) arg);
+    }
+}
