@@ -14,8 +14,8 @@ public class KochManager implements Observer {
     private JSF31KochFractalFX application;
     private List<Edge> edges;
     private int counter;
-    private boolean edgeSet;
-    private boolean counterSet;
+    private boolean edgeSet = false;
+    private boolean counterSet = false;
 
     public KochManager(JSF31KochFractalFX application) {
         kf = new KochFractal();
@@ -103,6 +103,25 @@ public class KochManager implements Observer {
         notify();
 
         counterSet = false;
+    }
+
+    // Add all the calculated edges at once
+    public synchronized void addEdges(ArrayList<Edge> newEdges) {
+        if (edgeSet) {
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                System.out.println("InterruptedException caught");
+            }
+        }
+
+        for (Edge e : newEdges) {
+            edges.add(e);
+        }
+        edgeSet = true;
+        System.out.println("Edge added: " );
+        notify();
+        edgeSet = false;
     }
 
     @Override
