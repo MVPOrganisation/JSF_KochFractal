@@ -15,7 +15,7 @@ public class EdgeCalculator implements Runnable, Observer {
 
     public EdgeCalculator(KochManager km, KochFractal fractal, int side) {
         this.km = km;
-        kf = fractal;
+        this.kf = fractal;
         this.side = side;
         kf.addObserver(this);
     }
