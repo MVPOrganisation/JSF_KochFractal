@@ -1,5 +1,7 @@
 package calculate;
 
+import timeutil.TimeStamp;
+
 import java.util.ArrayList;
 import java.util.Observable;
 import java.util.Observer;
@@ -14,7 +16,7 @@ public class EdgeCalculator implements Callable<ArrayList<Edge>>, Observer {
     private int side = -1;
     private ArrayList<Edge> edges;
 
-    public EdgeCalculator(int side) {
+    EdgeCalculator(int side) {
         this.kf = new KochFractal();
         this.side = side;
         kf.addObserver(this);
@@ -27,13 +29,14 @@ public class EdgeCalculator implements Callable<ArrayList<Edge>>, Observer {
         edges.add((Edge) arg);
     }
 
-
-    public void setLevel(int level) {
+    void setLevel(int level) {
         kf.setLevel(level);
     }
 
     @Override
     public ArrayList<Edge> call() throws Exception {
+        TimeStamp ts = new TimeStamp();
+        ts.setBegin("Thread: " + this + " starting calculation");
         switch (side) {
             case 0:
                 kf.generateBottomEdge();
@@ -48,6 +51,9 @@ public class EdgeCalculator implements Callable<ArrayList<Edge>>, Observer {
                 System.out.println("Choose a side ya twat");
                 return null;
         }
+        ts.setEnd("Thread: " + this + " finished calculation");
+        System.out.println(ts.toString());
+        System.out.println("Thread: " + this + ", Generated: " + String.valueOf(edges.size() + " edges"));
         return edges;
     }
 }

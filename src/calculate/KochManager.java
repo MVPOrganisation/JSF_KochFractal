@@ -51,8 +51,6 @@ public class KochManager {
         ts.setEnd("Finished calculation");
         requestDrawing();
         application.setTextCalc(ts.toString());
-
-
     }
 
     public void drawEdges() {
