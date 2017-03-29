@@ -1,8 +1,15 @@
 package calculate;
 
+import javafx.application.Platform;
+import javafx.concurrent.Task;
 import jsf31kochfractalfx.JSF31KochFractalFX;
+import sun.nio.ch.ThreadPool;
 import timeutil.TimeStamp;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * @author Max Meijer
@@ -14,55 +21,63 @@ public class KochManager implements Observer {
     private JSF31KochFractalFX application;
     private List<Edge> edges;
     private int counter;
-    private boolean edgeSet = false;
-    private boolean counterSet = false;
+    private ExecutorService pool;
+
+
 
     public KochManager(JSF31KochFractalFX application) {
         kf = new KochFractal();
         this.application = application;
         edges =  Collections.synchronizedList(new ArrayList());
         counter = 0;
+
     }
 
-    public void changeLevel(int nxt) {
+    public void changeLevel(int nxt) throws ExecutionException, InterruptedException {
         edges.clear();
 
-        kf.setLevel(nxt);
+        pool = Executors.newFixedThreadPool(3);
+
+        EdgeCalculator edgeBot = new EdgeCalculator(0);
+        EdgeCalculator edgeLeft = new EdgeCalculator(1);
+        EdgeCalculator edgeRight = new EdgeCalculator(2);
+
+        edgeBot.setLevel(nxt);
+        edgeLeft.setLevel(nxt);
+        edgeRight.setLevel(nxt);
+
         TimeStamp ts = new TimeStamp();
         TimeStamp tsd = new TimeStamp();
 
         ts.setBegin("Starting calculation");
-        EdgeCalculator edgeBot = new EdgeCalculator(this ,kf, 0);
-        EdgeCalculator edgeLeft = new EdgeCalculator(this ,kf, 1);
-        EdgeCalculator edgeRight = new EdgeCalculator(this ,kf, 2);
 
-        Thread t1 = new Thread(edgeBot);
-        Thread t2 = new Thread(edgeLeft);
-        Thread t3 = new Thread(edgeRight);
+        Future<ArrayList<Edge>> futLeft = pool.submit(edgeLeft);
+        Future<ArrayList<Edge>> futRight = pool.submit(edgeRight);
+        Future<ArrayList<Edge>> futBot = pool.submit(edgeBot);
 
-        t1.start();
-        t2.start();
-        t3.start();
+        edges.addAll(futLeft.get());
+        edges.addAll(futRight.get());
+        edges.addAll(futBot.get());
 
-        while(counter != 3) {
-            try {
-                t1.join();
-                t2.join();
-                t3.join();
-            } catch(InterruptedException ex) {
-                ex.printStackTrace();
-            }
-        }
+        pool.shutdown();
 
+        System.out.println("Start calculating");
+
+        System.out.println("Finished calculating");
+        System.out.println("Start drawing");
         ts.setEnd("Finished calculation");
+
         tsd.setBegin("Start drawing");
         drawEdges();
         tsd.setEnd("Finished drawing");
+
+        System.out.println("Finished drawing");
 
         application.setTextCalc(ts.toString());
         application.setTextDraw(tsd.toString());
         System.out.println("Finished");
         counter = 0;
+
     }
 
     public void drawEdges() {
@@ -74,54 +89,19 @@ public class KochManager implements Observer {
         }
     }
 
-    public synchronized void addEdge(Edge edge) {
-        if (edgeSet) {
-            try {
-                wait();
-            } catch (InterruptedException e) {
-                System.out.println("InterruptedException caught");
-            }
-        }
+    // Add a single edge to the local collection
+    synchronized void addEdge(Edge edge) {
         edges.add(edge);
-        edgeSet = true;
-        System.out.println("Edge added: " + edge);
-        notify();
-        edgeSet = false;
     }
 
-    public synchronized  void increaseCounter() {
-        if (counterSet) {
-            try {
-                wait();
-            } catch (InterruptedException e) {
-                System.out.println("InterruptedException caught");
-            }
-        }
+    // Increase the counter to show what edge generation has finished
+    synchronized  void increaseCounter() {
         counter++;
-        counterSet = true;
-        System.out.println("Counter at: " + counter);
-        notify();
-
-        counterSet = false;
     }
 
     // Add all the calculated edges at once
-    public synchronized void addEdges(ArrayList<Edge> newEdges) {
-        if (edgeSet) {
-            try {
-                wait();
-            } catch (InterruptedException e) {
-                System.out.println("InterruptedException caught");
-            }
-        }
-
-        for (Edge e : newEdges) {
-            edges.add(e);
-        }
-        edgeSet = true;
-        System.out.println("Edge added: " );
-        notify();
-        edgeSet = false;
+    synchronized void addEdges(ArrayList<Edge> newEdges) {
+        edges.addAll(newEdges);
     }
 
     @Override
