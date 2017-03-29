@@ -47,7 +47,7 @@ public class KochManager implements Observer {
         edgeRight.setLevel(nxt);
 
         TimeStamp ts = new TimeStamp();
-        TimeStamp tsd = new TimeStamp();
+
 
         ts.setBegin("Starting calculation");
 
@@ -59,34 +59,30 @@ public class KochManager implements Observer {
         edges.addAll(futRight.get());
         edges.addAll(futBot.get());
 
-        pool.shutdown();
-
-        System.out.println("Start calculating");
-
-        System.out.println("Finished calculating");
-        System.out.println("Start drawing");
         ts.setEnd("Finished calculation");
-
-        tsd.setBegin("Start drawing");
-        drawEdges();
-        tsd.setEnd("Finished drawing");
-
-        System.out.println("Finished drawing");
-
+        requestDrawing();
         application.setTextCalc(ts.toString());
-        application.setTextDraw(tsd.toString());
-        System.out.println("Finished");
         counter = 0;
 
     }
 
     public void drawEdges() {
+        TimeStamp tsd = new TimeStamp();
+        tsd.setBegin("Start drawing");
+
         application.clearKochPanel();
 
         application.setTextNrEdges(String.valueOf(kf.getNrOfEdges()));
         for(Edge e: edges) {
             application.drawEdge(e);
         }
+
+        tsd.setEnd("Finished drawing");
+        application.setTextDraw(tsd.toString());
+    }
+
+    public void requestDrawing() {
+        application.requestDrawEdges();
     }
 
     // Add a single edge to the local collection
