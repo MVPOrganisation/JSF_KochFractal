@@ -3,10 +3,7 @@ package calculate;
 import jsf31kochfractalfx.JSF31KochFractalFX;
 import timeutil.TimeStamp;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 /**
  * @author Max Meijer
@@ -14,43 +11,50 @@ import java.util.concurrent.Future;
  */
 public class KochManager {
 
-    private KochFractal kf;
     private JSF31KochFractalFX application;
     private List<Edge> edges;
     private ExecutorService pool;
+    private CyclicBarrier barrier;
+    private Future<ArrayList<Edge>> futLeft;
+    private Future<ArrayList<Edge>> futRight;
+    private Future<ArrayList<Edge>> futBot;
 
     public KochManager(JSF31KochFractalFX application) {
-        kf = new KochFractal();
         this.application = application;
-        edges =  Collections.synchronizedList(new ArrayList());
+        edges =  new ArrayList<>();
+        barrier = new CyclicBarrier(4);
     }
 
     public void changeLevel(int nxt) throws ExecutionException, InterruptedException {
         edges.clear();
-        pool = Executors.newFixedThreadPool(3);
+        pool = Executors.newFixedThreadPool(4);
 
-        EdgeCalculator edgeBot = new EdgeCalculator(0);
-        EdgeCalculator edgeLeft = new EdgeCalculator(1);
-        EdgeCalculator edgeRight = new EdgeCalculator(2);
+        EdgeCalculator edgeBot = new EdgeCalculator(0, barrier);
+        EdgeCalculator edgeLeft = new EdgeCalculator(1, barrier);
+        EdgeCalculator edgeRight = new EdgeCalculator(2, barrier);
+        WaitingThread waitThread = new WaitingThread(barrier, this);
 
         edgeBot.setLevel(nxt);
         edgeLeft.setLevel(nxt);
         edgeRight.setLevel(nxt);
 
-        TimeStamp ts = new TimeStamp();
-        ts.setBegin("Starting calculation");
 
-        Future<ArrayList<Edge>> futLeft = pool.submit(edgeLeft);
-        Future<ArrayList<Edge>> futRight = pool.submit(edgeRight);
-        Future<ArrayList<Edge>> futBot = pool.submit(edgeBot);
+        futLeft = pool.submit(edgeLeft);
+        futRight = pool.submit(edgeRight);
+        futBot = pool.submit(edgeBot);
+        pool.submit(waitThread);
+    }
 
-        edges.addAll(futLeft.get());
-        edges.addAll(futRight.get());
-        edges.addAll(futBot.get());
+    void getResults() {
+        try {
+            edges.addAll(futLeft.get());
+            edges.addAll(futRight.get());
+            edges.addAll(futBot.get());
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
 
-        ts.setEnd("Finished calculation");
         requestDrawing();
-        application.setTextCalc(ts.toString());
     }
 
     public void drawEdges() {
@@ -59,7 +63,7 @@ public class KochManager {
 
         application.clearKochPanel();
 
-        application.setTextNrEdges(String.valueOf(kf.getNrOfEdges()));
+        application.setTextNrEdges(String.valueOf(edges.size()));
         for(Edge e: edges) {
             application.drawEdge(e);
         }
@@ -68,7 +72,9 @@ public class KochManager {
         application.setTextDraw(tsd.toString());
     }
 
-    private void requestDrawing() {
+    void requestDrawing() {
         application.requestDrawEdges();
     }
+
+
 }

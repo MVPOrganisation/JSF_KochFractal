@@ -5,7 +5,10 @@ import timeutil.TimeStamp;
 import java.util.ArrayList;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
 
 /**
  * @author Max Meijer.
@@ -15,8 +18,10 @@ public class EdgeCalculator implements Callable<ArrayList<Edge>>, Observer {
     private KochFractal kf;
     private int side = -1;
     private ArrayList<Edge> edges;
+    private CyclicBarrier barrier;
 
-    EdgeCalculator(int side) {
+    EdgeCalculator(int side, CyclicBarrier barrier) {
+        this.barrier = barrier;
         this.kf = new KochFractal();
         this.side = side;
         kf.addObserver(this);
@@ -54,6 +59,13 @@ public class EdgeCalculator implements Callable<ArrayList<Edge>>, Observer {
         ts.setEnd("Thread: " + this + " finished calculation");
         System.out.println(ts.toString());
         System.out.println("Thread: " + this + ", Generated: " + String.valueOf(edges.size() + " edges"));
+
+        try {
+            barrier.await();
+        } catch (InterruptedException | BrokenBarrierException ex) {
+            ex.printStackTrace();
+        }
+
         return edges;
     }
 }
