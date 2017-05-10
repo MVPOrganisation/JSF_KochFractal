@@ -30,20 +30,21 @@ public class KochManager implements Observer {
         edges =  Collections.synchronizedList(new ArrayList());
         counter = 0;
         pool = Executors.newFixedThreadPool(3);
-
-
     }
 
     public void changeLevel(int nxt) {
+        System.out.println("Cangeing level to: " + level);
+        counter = 0;
+
         if(edgeBot != null || edgeRight != null || edgeLeft != null) {
             edgeBot.cancel(true);
             edgeRight.cancel(true);
             edgeLeft.cancel(true);
         }
 
-        edgeBot = new EdgeCalculator(this, 0);
-        edgeLeft = new EdgeCalculator(this, 1);
-        edgeRight = new EdgeCalculator(this, 2);
+        edgeBot = new EdgeCalculator(this, 0, 1);
+        edgeLeft = new EdgeCalculator(this, 1, 2);
+        edgeRight = new EdgeCalculator(this, 2, 3);
 
         edges.clear();
         level = nxt;
@@ -65,7 +66,7 @@ public class KochManager implements Observer {
     }
 
     public void drawEdges() {
-        calculateTimer.setEnd("Finished calculating");
+        System.out.println("Drawing edges***************");
         TimeStamp ts = new TimeStamp();
 
         ts.setBegin("Starting drawing");
@@ -75,12 +76,12 @@ public class KochManager implements Observer {
         for(Edge e: edges) {
             application.drawEdge(e);
         }
+
         ts.setEnd("Finished drawing");
         application.setTextDraw(ts.toString());
-        application.setTextCalc(calculateTimer.toString());
     }
 
-    public void requestDrawTempEdge(Edge e) {
+    void requestDrawTempEdge(Edge e) {
         application.requestDrawTempEdge(e);
     }
 
@@ -103,6 +104,11 @@ public class KochManager implements Observer {
         counter++;
     }
 
+    void stopCalculationTimer() {
+        calculateTimer.setEnd("Finished calculating");
+        application.setTextCalc(calculateTimer.toString());
+    }
+
     // Add all the calculated edges at once
     synchronized void addEdges(ArrayList<Edge> newEdges) {
         edges.addAll(newEdges);
@@ -115,13 +121,5 @@ public class KochManager implements Observer {
 
     int getCounter() {
         return counter;
-    }
-
-    void stopCalculateTimer() {
-        calculateTimer.setEnd("Finished calculating");
-    }
-
-    void bindProgress() {
-
     }
 }

@@ -17,13 +17,15 @@ public class EdgeCalculator extends Task<ArrayList<Edge>> implements Observer {
     private KochFractal kf;
     private int side = -1;
     private ArrayList<Edge> edges;
+    private int sleepTime = 1;
 
-    public EdgeCalculator(KochManager km, int side) {
+    EdgeCalculator(KochManager km, int side, int sleepTime) {
         this.km = km;
         this.kf = new KochFractal();
         this.side = side;
         kf.addObserver(this);
         edges = new ArrayList<>();
+        this.sleepTime = sleepTime;
     }
 
     @Override
@@ -36,24 +38,21 @@ public class EdgeCalculator extends Task<ArrayList<Edge>> implements Observer {
         updateMessage("Nr edges: " + String.valueOf(edges.size()));
 
         try {
-            sleep(1);
+            sleep(sleepTime);
         } catch (InterruptedException e) {
             e.printStackTrace();
             kf.cancel();
             edges.clear();
         }
-
-
     }
 
-    public void setLevel(int level) {
+    void setLevel(int level) {
         kf.setLevel(level);
     }
 
     @Override
     protected ArrayList<Edge> call() throws InterruptedException {
             edges.clear();
-            System.out.println("running at level: " + kf.getLevel());
             switch (side) {
                 case 0:
                     kf.generateBottomEdge();
@@ -74,6 +73,7 @@ public class EdgeCalculator extends Task<ArrayList<Edge>> implements Observer {
             km.increaseCounter();
 
             if (km.getCounter() == 3) {
+                km.stopCalculationTimer();
                 km.requestDrawEdges();
             }
 
